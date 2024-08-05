@@ -1,0 +1,55 @@
+version: '3.7'
+
+services:
+  traefik:
+    image: "traefik:v2.1"
+    container_name: "traefik"
+    hostname: "traefik"
+    env_file:
+      - .env
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+      - "./traefik-file.yml:/traefik.yml"
+      - "./acme.json/:/acme.json"
+    labels:
+      - "traefik.enable=true"
+      ## DNS CHALLENGE
+      - "traefik.http.routers.traefik.rule=Host(`traefik.$MY_DOMAIN`)"
+      - "traefik.http.routers.traefik.service=api@internal"
+      - "traefik.http.routers.traefik.entrypoints=websecure"
+      - "traefik.http.routers.traefik.tls.certresolver=lets-encr"
+      - "traefik.http.routers.traefik.tls.domains[0].main=*.$MY_DOMAIN"
+      - "traefik.http.routers.traefik.tls.domains[0].sans=$MY_DOMAIN"
+      ## HTTP REDIRECT
+      - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
+      - "traefik.http.routers.redirect-https.rule=HostRegexp(`{host:.+}`)"
+      - "traefik.http.routers.redirect-https.entrypoints=web"
+      - "traefik.http.routers.redirect-https.middlewares=redirect-to-https"
+
+  antmedia:
+    image: antmediaserver:latest
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.antmedia-http.rule=Host(`$MY_DOMAIN`)"
+      - "traefik.http.routers.antmedia-http.entrypoints=web"
+      - "traefik.http.routers.antmedia-http.middlewares=redirect-to-https"
+      - "traefik.http.routers.antmedia-https.rule=Host(`$MY_DOMAIN`)"
+      - "traefik.http.routers.antmedia-https.entrypoints=websecure"
+      - "traefik.http.routers.antmedia-https.tls.certresolver=lets-encr"
+      - "traefik.http.services.antmedia.loadbalancer.server.port=5080"
+      ## HTTP REDIRECT
+      - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
+      - "traefik.http.routers.redirect-https.rule=HostRegexp(`{host:.+}`)"
+      - "traefik.http.routers.redirect-https.entrypoints=web"
+      - "traefik.http.routers.redirect-https.middlewares=redirect-to-https"
+volumes :
+  datastore : {}
+
+networks:
+  default:
+    external:
+      name: $DEFAULT_NETWORK
