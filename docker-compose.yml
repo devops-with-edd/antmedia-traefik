@@ -46,9 +46,11 @@ services:
       - "traefik.http.routers.redirect-https.rule=HostRegexp(`{host:.+}`)"
       - "traefik.http.routers.redirect-https.entrypoints=web"
       - "traefik.http.routers.redirect-https.middlewares=redirect-to-https"
-volumes :
-  datastore : {}
-
+volumes:
+      - "antmedia_vol:/usr/local/antmedia/" 
+volumes:
+  antmedia_vol:
+  external: true      
 networks:
   default:
     external:
